@@ -1,7 +1,14 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+buildscript {
+    dependencies {
+        "classpath"("org.jetbrains.kotlinx:kotlinx-knit:0.2.3")
+    }
+}
+
 plugins {
     kotlin("jvm") version "1.4.10"
+    id("kotlinx-knit") version "0.1.0"
 }
 
 group = "org.pedrofelix.courses"

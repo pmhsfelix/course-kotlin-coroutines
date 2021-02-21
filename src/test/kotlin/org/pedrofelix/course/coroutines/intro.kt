@@ -3,6 +3,7 @@ package org.pedrofelix.course.coroutines
 import kotlinx.coroutines.*
 import org.junit.Test
 import org.slf4j.LoggerFactory
+import java.time.Duration
 
 private val log = LoggerFactory.getLogger(IntroExamples::class.java)
 
@@ -12,9 +13,9 @@ class IntroExamples {
      * A regular function that just waits for some time to elapse
      * using a regular [Thread.sleep]
      */
-    fun sleepForABit(ms: Long) {
+    fun sleepForABit(duration: Duration) {
         log.info("Before sleep")
-        Thread.sleep(ms)
+        Thread.sleep(duration.toMillis())
         log.info("After sleep")
     }
 
@@ -26,32 +27,31 @@ class IntroExamples {
      */
     @Test
     fun call_regular_function_from_another_regular_function() {
-        sleepForABit(500)
+        sleepForABit(Duration.ofMillis(500))
     }
 
     @Test
     fun use_a_regular_function_to_create_two_threads() {
         log.info("starting")
-        // using the Thread constructor
-        val th0 = Thread {
-            sleepForABit(500)
+        val thread0 = Thread {
+            sleepForABit(Duration.ofMillis(500))
         }.apply { start() }
 
-        // using an helper method to automatically start the Thread
-        val th1 = startThread {
-            sleepForABit(1000)
-        }
+        val thread1 = Thread {
+            sleepForABit(Duration.ofMillis(1000))
+        }.apply { start() }
+
         log.info("Waiting for threads to end")
-        join(th0, th1)
+        join(thread0, thread1)
     }
 
     /**
      * A suspend function that just waits for some time to elapse
      * using a [delay] and not [Thread.sleep]
      */
-    suspend fun delayForABit(ms: Long) {
+    suspend fun delayForABit(duration: Duration) {
         log.info("Before sleep")
-        delay(ms)
+        delay(duration.toMillis())
         log.info("After sleep")
     }
 
@@ -63,7 +63,7 @@ class IntroExamples {
 
     // @Test - Running this function as a test will fail. More on this later.
     suspend fun call_suspend_function_from_another_suspend_function() {
-        delayForABit(500)
+        delayForABit(Duration.ofMillis(500))
     }
 
     /**
@@ -79,16 +79,29 @@ class IntroExamples {
     @Test
     fun use_a_suspend_function_to_create_two_coroutines() {
         log.info("starting")
-        // using the launch coroutine builder
-        val co0 = GlobalScope.launch(Dispatchers.Unconfined) {
-            sleepForABit(500)
+        val coroutine0 = GlobalScope.launch() {
+            delayForABit(Duration.ofMillis(500))
         }
 
-        val co1 = GlobalScope.launch(Dispatchers.Unconfined) {
-            sleepForABit(1000)
+        val coroutine1 = GlobalScope.launch(Dispatchers.Unconfined) {
+            delayForABit(Duration.ofMillis(100))
         }
         log.info("Waiting for coroutines to end")
-        joinBlocking(co0, co1)
+        joinBlocking(coroutine0, coroutine1)
     }
 
+    @Test
+    fun use_a_suspend_function_to_create_two_coroutines_2() = runBlocking {
+        log.info("starting")
+        val coroutine0 = launch {
+            delayForABit(Duration.ofMillis(500))
+        }
+
+        val coroutine1 = launch{
+            delayForABit(Duration.ofMillis(100))
+        }
+        log.info("Waiting for coroutines to end")
+        join(coroutine0, coroutine1)
+    }
 }
+
