@@ -7,8 +7,7 @@ buildscript {
 }
 
 plugins {
-    kotlin("jvm") version "1.4.10"
-    id("kotlinx-knit") version "0.1.0"
+    kotlin("jvm") version "1.5.31"
 }
 
 group = "org.pedrofelix.courses"
@@ -20,11 +19,15 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
     implementation("org.slf4j:slf4j-api:1.7.30")
     implementation("org.slf4j:slf4j-simple:1.7.30")
 
+    implementation("io.ktor:ktor-client-android:1.6.5")
+    implementation("io.ktor:ktor-client:1.6.5")
+
     testImplementation(kotlin("test-junit"))
+
 }
 
 tasks.test {
