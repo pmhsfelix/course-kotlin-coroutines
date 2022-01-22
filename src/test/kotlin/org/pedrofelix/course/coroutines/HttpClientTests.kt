@@ -18,5 +18,4 @@ class HttpClientTests {
         val response: HttpResponse = client.get("https://httpbin.org/delay/2")
         logger.trace("status = {}", response.status)
     }
-
 }
