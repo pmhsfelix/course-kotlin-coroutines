@@ -1,10 +1,18 @@
 package org.pedrofelix.course.coroutines
 
-import kotlinx.coroutines.*
-import org.junit.Assert.*
+import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.fail
 
 private val logger = LoggerFactory.getLogger(ExceptionTests::class.java)
 
@@ -13,7 +21,6 @@ class ExceptionTests {
 
     @Test
     fun `synchronizing with coroutines that end with exceptions`(): Unit = runBlocking {
-
         // Creating and synchronizing with a coroutine that ends with an exception,
         // using launch and join
         val job = GlobalScope.launch {
@@ -34,7 +41,7 @@ class ExceptionTests {
             delay(100)
             throw RuntimeException("exception from async")
         }
-        var enteredTheCatch = false
+        val enteredTheCatch: Boolean
         try {
             deferred.await()
         } catch (e: Exception) {

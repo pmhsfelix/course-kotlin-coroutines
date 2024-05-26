@@ -1,10 +1,12 @@
 package org.pedrofelix.course.coroutines
 
+import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.*
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
@@ -16,7 +18,6 @@ class IntroTests {
 
     @Test
     fun `coroutines are suspendable sequential computations`() = runBlocking {
-
         val startTime = System.currentTimeMillis()
         // launch (create and start) a coroutine
         val coroutine0 = launch {
@@ -39,7 +40,7 @@ class IntroTests {
         val endTime = System.currentTimeMillis()
         assertTrue(
             "The total time to run is less than the sum of the time for each coroutine",
-            endTime - startTime < 2 * 5 * 200
+            endTime - startTime < 2 * 5 * 200,
         )
     }
     /*  Takeaways
@@ -55,7 +56,6 @@ class IntroTests {
 
     @Test
     fun `multiple coroutines can run in the same thread`() = runBlocking {
-
         val mainThread = Thread.currentThread()
 
         val coroutine0 = launch {
@@ -138,13 +138,12 @@ class IntroTests {
         val endTime = System.currentTimeMillis()
         assertTrue(
             "The total time to run is more than the sum of the time for each coroutine",
-            endTime - startTime > 2 * 5 * 200
+            endTime - startTime > 2 * 5 * 200,
         )
     }
 
     @Test
     fun `what happens if the coroutine blocks the thread where it is running`() = runBlocking {
-
         val mainThread = Thread.currentThread()
         val startTime = System.currentTimeMillis()
         val coroutine0 = launch {
@@ -168,7 +167,7 @@ class IntroTests {
         val endTime = System.currentTimeMillis()
         assertTrue(
             "The total time to run is now greater or equal than the sum of the time for each coroutine",
-            endTime - startTime > 2 * 5 * 200
+            endTime - startTime > 2 * 5 * 200,
         )
     }
     /*  Takeaways
@@ -182,7 +181,6 @@ class IntroTests {
 
     @Test
     fun `It is possible to have more than one thread being used to schedule coroutines`() = runBlocking {
-
         val mainThread = Thread.currentThread()
         val startTime = System.currentTimeMillis()
         val coroutine0 = launch(Dispatchers.Default) {
@@ -206,7 +204,7 @@ class IntroTests {
         val endTime = System.currentTimeMillis()
         assertTrue(
             "The total time to run is now again smalller than the sum of the time for each coroutine",
-            endTime - startTime < 2 * 5 * 200
+            endTime - startTime < 2 * 5 * 200,
         )
     }
     /*  Takeaways
@@ -220,7 +218,6 @@ class IntroTests {
 
     @Test
     fun `since coroutines are more lightweight than threads, can we have lots of them`() = runBlocking {
-
         val nOfCoroutines = 100_000
         val mainThread = Thread.currentThread()
 
@@ -237,5 +234,4 @@ class IntroTests {
         assertEquals(nOfCoroutines, counter.get())
         log.trace("yes, we can")
     }
-
 }

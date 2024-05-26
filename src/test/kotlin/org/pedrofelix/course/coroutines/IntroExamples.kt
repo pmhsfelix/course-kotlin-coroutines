@@ -1,6 +1,10 @@
 package org.pedrofelix.course.coroutines
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.time.Duration
@@ -79,7 +83,7 @@ class IntroExamples {
     @Test
     fun use_a_suspend_function_to_create_two_coroutines() {
         log.info("starting")
-        val coroutine0 = GlobalScope.launch() {
+        val coroutine0 = GlobalScope.launch {
             delayForABit(Duration.ofMillis(500))
         }
 
@@ -97,11 +101,10 @@ class IntroExamples {
             delayForABit(Duration.ofMillis(500))
         }
 
-        val coroutine1 = launch{
+        val coroutine1 = launch {
             delayForABit(Duration.ofMillis(100))
         }
         log.info("Waiting for coroutines to end")
         join(coroutine0, coroutine1)
     }
 }
-

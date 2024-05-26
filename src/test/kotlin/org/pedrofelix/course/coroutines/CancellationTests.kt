@@ -1,7 +1,18 @@
 package org.pedrofelix.course.coroutines
 
-import kotlinx.coroutines.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.supervisorScope
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -61,7 +72,10 @@ class CancellationTests {
                 cancel()
                 logger.trace(
                     "c1.isCancelled={}, c1.isCompleted={}, c2.isCancelled={}, c2.isCompleted={}",
-                    c1.isCancelled, c1.isCompleted, c2.isCancelled, c2.isCompleted
+                    c1.isCancelled,
+                    c1.isCompleted,
+                    c2.isCancelled,
+                    c2.isCompleted,
                 )
             }
         } catch (e: CancellationException) {
@@ -103,7 +117,10 @@ class CancellationTests {
                 cancel()
                 logger.trace(
                     "c1.isCancelled={}, c1.isCompleted={}, c2.isCancelled={}, c2.isCompleted={}",
-                    c1.isCancelled, c1.isCompleted, c2.isCancelled, c2.isCompleted
+                    c1.isCancelled,
+                    c1.isCompleted,
+                    c2.isCancelled,
+                    c2.isCompleted,
                 )
             }
         } catch (e: CancellationException) {
@@ -120,7 +137,6 @@ class CancellationTests {
 
     @Test
     fun `child cancellation - a child throws Exception`() = runBlocking(CoroutineExceptionHandler(::exceptionHandler)) {
-
         var job0: Job? = null
         var job1: Job? = null
         var job2: Job? = null
@@ -148,60 +164,60 @@ class CancellationTests {
      */
 
     @Test
-    fun `child cancellation - a child throws CancellationException`() = runBlocking(CoroutineExceptionHandler(::exceptionHandler)) {
+    fun `child cancellation - a child throws CancellationException`() =
+        runBlocking(CoroutineExceptionHandler(::exceptionHandler)) {
+            var job0: Job? = null
+            var job1: Job? = null
+            var job2: Job? = null
 
-        var job0: Job? = null
-        var job1: Job? = null
-        var job2: Job? = null
+            supervisorScope {
+                job0 = launch {
+                    job1 = launch {
+                        delay(10)
+                        throw CancellationException("Giving up")
+                    }
 
-        supervisorScope {
-            job0 = launch {
-                job1 = launch {
-                    delay(10)
-                    throw CancellationException("Giving up")
-                }
-
-                job2 = launch {
-                    delay(20)
+                    job2 = launch {
+                        delay(20)
+                    }
                 }
             }
-        }
 
-        assertEquals(JobState.COMPLETED, job0?.getState())
-        assertEquals(JobState.CANCELLED, job1?.getState())
-        assertEquals(JobState.COMPLETED, job2?.getState())
-    }
+            assertEquals(JobState.COMPLETED, job0?.getState())
+            assertEquals(JobState.CANCELLED, job1?.getState())
+            assertEquals(JobState.COMPLETED, job2?.getState())
+        }
     /*
      * Takeaways:
      * - a CancellationException on child1 does NOT cancel the parent or the sibling
      */
 
     @Test
-    fun `child cancellation using async - a child throws CancellationException`() = runBlocking(CoroutineExceptionHandler(::exceptionHandler)) {
+    fun `child cancellation using async - a child throws CancellationException`() =
+        runBlocking(CoroutineExceptionHandler(::exceptionHandler)) {
+            var job0: Job? = null
+            var job1: Deferred<Unit>? = null
+            var job2: Deferred<Int>? = null
 
-        var job0: Job? = null
-        var job1: Deferred<Unit>? = null
-        var job2: Deferred<Int>? = null
+            supervisorScope {
+                job0 = launch {
+                    job1 = async {
+                        delay(10)
+                        throw CancellationException("Giving up")
+                    }
 
-        supervisorScope {
-            job0 = launch {
-                job1 = async {
-                    delay(10)
-                    throw CancellationException("Giving up")
-                }
-
-                job2 = async {
-                    delay(20)
-                    42
+                    job2 = async {
+                        delay(20)
+                        42
+                    }
                 }
             }
-        }
 
-        assertEquals(JobState.COMPLETED, job0?.getState())
-        assertEquals(JobState.CANCELLED, job1?.getState())
-        assertEquals(JobState.COMPLETED, job2?.getState())
-        assertEquals(42, job2?.await())
-    }
+            assertEquals(JobState.COMPLETED, job0?.getState())
+            assertEquals(JobState.CANCELLED, job1?.getState())
+            assertEquals(JobState.COMPLETED, job2?.getState())
+            assertEquals(42, job2?.await())
+        }
     /*
      * Takeaways:
      * - a CancellationException on child1 does NOT cancel the parent or the sibling,
@@ -210,9 +226,7 @@ class CancellationTests {
 
     @Test
     fun `using supervisorScope`() = runBlocking {
-
         val job0 = launch(CoroutineExceptionHandler(::exceptionHandler)) {
-
             supervisorScope {
                 launch {
                     delay(10)
@@ -237,5 +251,4 @@ class CancellationTests {
     private fun exceptionHandler(context: CoroutineContext, ex: Throwable) {
         logger.info("Exception handler: Exception '{}' on '{}'", ex, context)
     }
-
 }

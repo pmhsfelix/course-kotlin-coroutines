@@ -56,6 +56,7 @@ class SuspendTests {
         // Here we just cast the suspend function to a non-suspend function taking into consideration that extra
         // parameter. Since in the function produces an Int, that means that the passed in continuation receives
         // an Int.
+        @Suppress("UNCHECKED_CAST")
         val nonSuspendFunctionReference = ::aSuspendFunction as (String, Continuation<Int>) -> Unit
 
         // This is the continuation we are going to pass to the suspend function and that will be called by it

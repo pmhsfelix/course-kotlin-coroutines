@@ -1,22 +1,31 @@
 package org.pedrofelix.course.coroutines
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.nio.ByteBuffer
-import java.nio.channels.*
+import java.nio.channels.AsynchronousByteChannel
+import java.nio.channels.AsynchronousCloseException
+import java.nio.channels.AsynchronousServerSocketChannel
+import java.nio.channels.AsynchronousSocketChannel
 import java.nio.channels.CompletionHandler
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
-import kotlin.coroutines.coroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 class ServerUsingThreads {
-
 
     fun run() {
         val serverSocket = ServerSocket()
@@ -32,7 +41,6 @@ class ServerUsingThreads {
     }
 
     private fun runClient(socket: Socket, clientId: Int) {
-
         try {
             logger.info("{}: Starting client", clientId)
             val inputStream = socket.getInputStream()
@@ -60,23 +68,23 @@ class ServerUsingThreads {
     }
 }
 
-
 val dispatcher = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
 
 class ServerUsingCoroutines {
 
     suspend fun run() {
-
         val serverSocket = AsynchronousServerSocketChannel.open()
         serverSocket.bind(InetSocketAddress("0.0.0.0", 8080))
         var clientId = 0
         val latch = CountDownLatch(1)
-        Runtime.getRuntime().addShutdownHook(Thread {
-            logger.info("shutdown started")
-            serverSocket.close()
-            latch.await()
-            logger.info("shutdown completed")
-        })
+        Runtime.getRuntime().addShutdownHook(
+            Thread {
+                logger.info("shutdown started")
+                serverSocket.close()
+                latch.await()
+                logger.info("shutdown completed")
+            },
+        )
         val handler = CoroutineExceptionHandler { _, ex ->
             logger.info("Coroutine ended with exception: {}", ex.javaClass.simpleName)
         }
@@ -103,7 +111,6 @@ class ServerUsingCoroutines {
     }
 
     private suspend fun runClient(channel: AsynchronousSocketChannel, clientId: Int) {
-
         try {
             logger.info("{}: Starting client", clientId)
             val buffer = ByteBuffer.allocate(2)
@@ -137,7 +144,6 @@ class ServerUsingCoroutines {
 }*/
 
 fun main(): Unit = runBlocking {
-
     val server = ServerUsingCoroutines()
     server.run()
 }
@@ -145,17 +151,19 @@ fun main(): Unit = runBlocking {
 suspend fun AsynchronousServerSocketChannel.acceptAsync() =
     suspendCoroutine<AsynchronousSocketChannel> { continuation ->
 
-        this.accept(Unit, object : CompletionHandler<AsynchronousSocketChannel, Unit> {
-            override fun completed(channel: AsynchronousSocketChannel, attachment: Unit) {
-                continuation.resume(channel)
-            }
+        this.accept(
+            Unit,
+            object : CompletionHandler<AsynchronousSocketChannel, Unit> {
+                override fun completed(channel: AsynchronousSocketChannel, attachment: Unit) {
+                    continuation.resume(channel)
+                }
 
-            override fun failed(exception: Throwable, attachment: Unit) {
-                continuation.resumeWithException(exception)
-            }
-        })
+                override fun failed(exception: Throwable, attachment: Unit) {
+                    continuation.resumeWithException(exception)
+                }
+            },
+        )
     }
-
 
 private val logger = LoggerFactory.getLogger("Utils")
 
@@ -166,34 +174,41 @@ suspend fun AsynchronousByteChannel.readAsync(buffer: ByteBuffer) =
             logger.info("Closing AsynchronousByteChannel")
             this.close()
         }
-        this.read(buffer, Unit, object : CompletionHandler<Int, Unit> {
-            override fun completed(result: Int, attachment: Unit) {
-                continuation.resume(result)
-            }
+        this.read(
+            buffer,
+            Unit,
+            object : CompletionHandler<Int, Unit> {
+                override fun completed(result: Int, attachment: Unit) {
+                    continuation.resume(result)
+                }
 
-            override fun failed(exc: Throwable, attachment: Unit) {
-                continuation.resumeWithException(exc)
-            }
-        })
+                override fun failed(exc: Throwable, attachment: Unit) {
+                    continuation.resumeWithException(exc)
+                }
+            },
+        )
     }
 
 suspend fun AsynchronousByteChannel.writeAllAsync(buffer: ByteBuffer) {
-
     do {
         this.writeAsync(buffer)
     } while (buffer.remaining() != 0)
 }
 
 suspend fun AsynchronousByteChannel.writeAsync(buffer: ByteBuffer) =
-    suspendCoroutine<Int> { continuation ->
-        this.write(buffer, Unit, object : CompletionHandler<Int, Unit> {
+    suspendCoroutine { continuation ->
+        this.write(
+            buffer,
+            Unit,
+            object : CompletionHandler<Int, Unit> {
 
-            override fun completed(result: Int, attachment: Unit) {
-                continuation.resume(result)
-            }
+                override fun completed(result: Int, attachment: Unit) {
+                    continuation.resume(result)
+                }
 
-            override fun failed(exc: Throwable, attachment: Unit) {
-                continuation.resumeWithException(exc)
-            }
-        })
+                override fun failed(exc: Throwable, attachment: Unit) {
+                    continuation.resumeWithException(exc)
+                }
+            },
+        )
     }

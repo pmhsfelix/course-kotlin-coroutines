@@ -1,6 +1,13 @@
 package org.pedrofelix.course.coroutines
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.junit.Ignore
 import org.junit.Test
 import org.slf4j.LoggerFactory
@@ -8,6 +15,7 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URI
 import javax.net.ssl.HttpsURLConnection
+import kotlin.coroutines.cancellation.CancellationException
 
 private val logger = LoggerFactory.getLogger(ScopeAndContextTests::class.java)
 
@@ -29,7 +37,6 @@ class BlockingIOTests {
     @InternalCoroutinesApi
     @Test
     fun first() = runBlocking(Dispatchers.IO) {
-
         withTimeout(1000) {
             runInterruptible {
                 val conn = getConn(5, 444)
@@ -47,12 +54,13 @@ class BlockingIOTests {
                 try {
                     logger.info("Before sleep")
                     Thread.sleep(10000)
-                }catch(e: InterruptedException) {
+                } catch (e: InterruptedException) {
                     logger.info("InterruptedException")
                 }
             }
         }
     }
+
     @Test
     fun `trying to cancel a socket connect`() = runBlocking(Dispatchers.IO) {
         withTimeout(2000) {
@@ -106,7 +114,7 @@ class BlockingIOTests {
                         logger.trace("done")
                         42
                     }.await()
-                }catch(e: CancellationException) {
+                } catch (e: CancellationException) {
                     logger.trace("cancelled")
                     socket.close()
                 }
@@ -127,7 +135,7 @@ class BlockingIOTests {
                         logger.trace("Status code: {}", status)
                         42
                     }.await()
-                }catch(e: CancellationException) {
+                } catch (e: CancellationException) {
                     logger.trace("cancelled")
                     conn.disconnect()
                 }
@@ -151,7 +159,7 @@ class BlockingIOTests {
     }
 
     @Test
-    fun `running a suspend blocking function on the Main dispatcher`(): Unit {
+    fun `running a suspend blocking function on the Main dispatcher`() {
         runBlocking {
             launch {
                 logger.trace("Starting first coroutine")
@@ -165,7 +173,7 @@ class BlockingIOTests {
     }
 
     @Test
-    fun `running a suspend blocking function on the IO dispatcher`(): Unit {
+    fun `running a suspend blocking function on the IO dispatcher`() {
         runBlocking {
             launch {
                 logger.trace("Starting first coroutine")
@@ -177,5 +185,4 @@ class BlockingIOTests {
             }
         }
     }
-
 }

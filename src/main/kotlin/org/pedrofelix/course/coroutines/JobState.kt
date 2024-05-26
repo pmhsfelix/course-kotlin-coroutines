@@ -11,19 +11,19 @@ enum class JobState {
 }
 
 fun Job.getState(): JobState =
-    if(isActive) {
+    if (isActive) {
         JobState.ACTIVE_OR_COMPLETING
     } else {
-        if(isCompleted) {
-            if(isCancelled) {
+        if (isCompleted) {
+            if (isCancelled) {
                 JobState.CANCELLED
             } else {
                 JobState.COMPLETED
             }
-        }else {
-            if(isCancelled) {
+        } else {
+            if (isCancelled) {
                 JobState.CANCELLING
-            }else{
+            } else {
                 JobState.NEW
             }
         }

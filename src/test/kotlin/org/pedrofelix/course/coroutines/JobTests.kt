@@ -1,6 +1,12 @@
 package org.pedrofelix.course.coroutines
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableJob
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -13,7 +19,6 @@ class JobTests {
 
     @Test
     fun `job tree`() = runBlocking {
-
         // Some suspendable countdown latches to synchronize the test
         val syncWithChildCoroutineStart = KCountDownLatch(2)
         val syncWithParentAllowingTermination = KCountDownLatch(1)
@@ -26,7 +31,6 @@ class JobTests {
 
         // launch parent coroutine
         val job0 = launch(start = CoroutineStart.LAZY) {
-
             firstCoroutineContext = coroutineContext
 
             // wait a bit before starting child coroutines
@@ -58,7 +62,7 @@ class JobTests {
         assertEquals(
             "the job that represents the first launched coroutine has two child jobs",
             2,
-            job0.children.count()
+            job0.children.count(),
         )
         assertTrue("job0 contains job1 as a child", job0.children.contains(job1))
         assertTrue("job0 contains job2 as a child", job0.children.contains(job2))
@@ -80,7 +84,6 @@ class JobTests {
 
     @Test
     fun `using the Job from a scope`() = runBlocking {
-
         val scope = CoroutineScope(Job())
         // because the job returned by Job() implements CompletableJob()
         val job0 = scope.coroutineContext[Job] as CompletableJob

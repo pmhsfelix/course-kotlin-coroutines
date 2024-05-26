@@ -1,8 +1,8 @@
 package org.pedrofelix.course.coroutines
 
-import kotlin.coroutines.Continuation
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -18,7 +18,7 @@ class KCountDownLatch(initialCounter: Int) {
             lock.unlock()
             return
         }
-        suspendCoroutine<Unit> { cont ->
+        suspendCoroutine { cont ->
             waiters.add(cont)
             lock.unlock()
         }
