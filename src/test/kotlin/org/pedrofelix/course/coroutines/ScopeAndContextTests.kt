@@ -1,5 +1,6 @@
 package org.pedrofelix.course.coroutines
 
+import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +16,6 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.CoroutineContext
 
 private val logger = LoggerFactory.getLogger(ScopeAndContextTests::class.java)
@@ -114,6 +114,7 @@ class ScopeAndContextTests {
                 logger.trace("Inside first nested coroutine")
             }
             withContext(Dispatchers.IO) {
+                logger.trace("Inside top coroutine")
                 launch {
                     delay(1000)
                     logger.trace("Inside second nested coroutine")
@@ -215,10 +216,11 @@ class ScopeAndContextTests {
      * - Now the traces before and after the delay run on a `DefaultDispatcher` worker thread.
      */
 
-    // Lets remove the spin-wait and replace it with a thread wait
+    // Let's remove the spin-wait and replace it with a thread wait
     @Test
     fun `using a explicit scope without a spin-wait`() {
-        val scope = CoroutineScope(Dispatchers.Default)
+        val job = Job()
+        val scope = CoroutineScope(job)
         scope.launch {
             logger.trace("Inside first nested coroutine, before delay")
             delay(1000)
@@ -226,18 +228,15 @@ class ScopeAndContextTests {
         }
         scope.launch {
             logger.trace("Inside second nested coroutine, before delay")
-            delay(1000)
+            delay(1500)
             logger.trace("Inside second nested coroutine, after delay")
         }
 
-        // TODO can we assume a CoroutineScope always have a `Job`?
-        val childrenJobs = scope.coroutineContext[Job]!!.children
-        val latch = CountDownLatch(childrenJobs.count())
-        childrenJobs.forEach {
-            it.invokeOnCompletion {
-                latch.countDown()
-            }
+        val latch = CountDownLatch(1)
+        job.invokeOnCompletion {
+            latch.countDown()
         }
+        job.complete()
         latch.await()
 
         logger.trace("Ending test")
@@ -281,9 +280,11 @@ class ScopeAndContextTests {
 
     @Test
     fun `using a explicit scope without a spin-wait and running everything on main`() {
+        logger.trace("Starting test")
         val dispatcher = InPlaceDispatcher()
+        val job: CompletableJob = Job()
         // a dispatcher is a context element, which is also an element
-        val scope = CoroutineScope(dispatcher)
+        val scope = CoroutineScope(dispatcher + job)
         scope.launch {
             logger.trace("Inside first nested coroutine, before delay")
             delay(1000)
@@ -295,16 +296,14 @@ class ScopeAndContextTests {
             logger.trace("Inside second nested coroutine, after delay")
         }
 
-        // TODO can we assume a CoroutineScope always have a `Job`?
-        val childrenJobs = scope.coroutineContext[Job]!!.children
-        val counter = AtomicInteger(childrenJobs.count())
-        childrenJobs.forEach {
-            it.invokeOnCompletion {
-                if (counter.decrementAndGet() == 0) {
-                    dispatcher.shutdown()
-                }
-            }
+        logger.trace("job.children: {}", job.children.count())
+        job.complete()
+        job.invokeOnCompletion {
+            dispatcher.shutdown()
         }
+
+        Thread.sleep(2000)
+        logger.trace("Starting pump")
         dispatcher.pump()
 
         logger.trace("Ending test")
