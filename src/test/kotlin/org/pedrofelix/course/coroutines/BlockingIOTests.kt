@@ -8,21 +8,23 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import org.junit.Ignore
-import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URI
 import javax.net.ssl.HttpsURLConnection
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.test.Ignore
+import kotlin.test.Test
 
 private val logger = LoggerFactory.getLogger(ScopeAndContextTests::class.java)
 
 @Ignore
 class BlockingIOTests {
-
-    fun getConn(delay: Long, port: Int): HttpsURLConnection {
+    fun getConn(
+        delay: Long,
+        port: Int,
+    ): HttpsURLConnection {
         val uri = URI("https://httpbin.org:$port/delay/$delay")
         return uri.toURL().openConnection() as HttpsURLConnection
     }
@@ -36,62 +38,67 @@ class BlockingIOTests {
 
     @InternalCoroutinesApi
     @Test
-    fun first() = runBlocking(Dispatchers.IO) {
-        withTimeout(1000) {
-            runInterruptible {
-                val conn = getConn(5, 444)
-                logger.trace("HttpsURLConnection obtained")
-                val status = getStatusCode(conn)
-                logger.trace("Status code: {}", status)
-            }
-        }
-    }
-
-    @Test
-    fun `cancelling a Thread sleep`() = runBlocking(Dispatchers.IO) {
-        withTimeout(2000) {
-            runInterruptible {
-                try {
-                    logger.info("Before sleep")
-                    Thread.sleep(10000)
-                } catch (e: InterruptedException) {
-                    logger.info("InterruptedException")
+    fun first(): Unit =
+        runBlocking(Dispatchers.IO) {
+            withTimeout(1000) {
+                runInterruptible {
+                    val conn = getConn(5, 444)
+                    logger.trace("HttpsURLConnection obtained")
+                    val status = getStatusCode(conn)
+                    logger.trace("Status code: {}", status)
                 }
             }
         }
-    }
 
     @Test
-    fun `trying to cancel a socket connect`() = runBlocking(Dispatchers.IO) {
-        withTimeout(2000) {
-            val socket = Socket()
-            runInterruptible {
-                socket.connect(InetSocketAddress("httpbin.org", 444))
+    fun `cancelling a Thread sleep`(): Unit =
+        runBlocking(Dispatchers.IO) {
+            withTimeout(2000) {
+                runInterruptible {
+                    try {
+                        logger.info("Before sleep")
+                        Thread.sleep(10000)
+                    } catch (e: InterruptedException) {
+                        logger.info("InterruptedException")
+                    }
+                }
             }
         }
-    }
 
     @Test
-    fun `trying to cancel a socket read`() = runBlocking(Dispatchers.IO) {
-        withTimeout(2000) {
-            val socket = Socket()
-            runInterruptible {
-                socket.connect(InetSocketAddress("httpbin.org", 443))
-                val buf = ByteArray(8)
-                socket.getInputStream().read(buf)
-                Unit
+    fun `trying to cancel a socket connect`(): Unit =
+        runBlocking(Dispatchers.IO) {
+            withTimeout(2000) {
+                val socket = Socket()
+                runInterruptible {
+                    socket.connect(InetSocketAddress("httpbin.org", 444))
+                }
             }
         }
-    }
+
+    @Test
+    fun `trying to cancel a socket read`(): Unit =
+        runBlocking(Dispatchers.IO) {
+            withTimeout(2000) {
+                val socket = Socket()
+                runInterruptible {
+                    socket.connect(InetSocketAddress("httpbin.org", 443))
+                    val buf = ByteArray(8)
+                    socket.getInputStream().read(buf)
+                    Unit
+                }
+            }
+        }
 
     @Test
     fun `trying to cancel a socket read using interrupts`() {
         val socket = Socket()
-        val th = Thread {
-            socket.connect(InetSocketAddress("httpbin.org", 443))
-            val buf = ByteArray(8)
-            socket.getInputStream().read(buf)
-        }.apply { start() }
+        val th =
+            Thread {
+                socket.connect(InetSocketAddress("httpbin.org", 443))
+                val buf = ByteArray(8)
+                socket.getInputStream().read(buf)
+            }.apply { start() }
         Thread.sleep(1000)
         logger.trace("interrupting")
         th.interrupt()
@@ -102,47 +109,49 @@ class BlockingIOTests {
     }
 
     @Test
-    fun `TODO`() = runBlocking {
-        withTimeout(2000) {
-            val socket = Socket()
-            withContext(Dispatchers.IO) {
-                try {
-                    async {
-                        socket.connect(InetSocketAddress("httpbin.org", 443))
-                        val buf = ByteArray(8)
-                        socket.getInputStream().read(buf)
-                        logger.trace("done")
-                        42
-                    }.await()
-                } catch (e: CancellationException) {
-                    logger.trace("cancelled")
-                    socket.close()
+    fun `TODO`() =
+        runBlocking {
+            withTimeout(2000) {
+                val socket = Socket()
+                withContext(Dispatchers.IO) {
+                    try {
+                        async {
+                            socket.connect(InetSocketAddress("httpbin.org", 443))
+                            val buf = ByteArray(8)
+                            socket.getInputStream().read(buf)
+                            logger.trace("done")
+                            42
+                        }.await()
+                    } catch (e: CancellationException) {
+                        logger.trace("cancelled")
+                        socket.close()
+                    }
                 }
+                Unit
             }
-            Unit
         }
-    }
 
     @Test
-    fun `TODO2`() = runBlocking {
-        withTimeout(2000) {
-            val conn = getConn(5, 443)
-            withContext(Dispatchers.IO) {
-                try {
-                    async {
-                        logger.trace("HttpsURLConnection obtained")
-                        val status = getStatusCode(conn)
-                        logger.trace("Status code: {}", status)
-                        42
-                    }.await()
-                } catch (e: CancellationException) {
-                    logger.trace("cancelled")
-                    conn.disconnect()
+    fun `TODO2`() =
+        runBlocking {
+            withTimeout(2000) {
+                val conn = getConn(5, 443)
+                withContext(Dispatchers.IO) {
+                    try {
+                        async {
+                            logger.trace("HttpsURLConnection obtained")
+                            val status = getStatusCode(conn)
+                            logger.trace("Status code: {}", status)
+                            42
+                        }.await()
+                    } catch (e: CancellationException) {
+                        logger.trace("cancelled")
+                        conn.disconnect()
+                    }
                 }
+                Unit
             }
-            Unit
         }
-    }
 
     fun blockingFunction() {
         Thread.sleep(1000)

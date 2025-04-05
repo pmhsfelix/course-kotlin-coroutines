@@ -13,12 +13,12 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.Test
 
 class SupervisorScopeTests {
-
     @Test
     fun first() {
-        val exceptionHandler = CoroutineExceptionHandler { context, throwable ->
-            logger.info("CoroutineExceptionHandler: {}, {}", context, throwable.message)
-        }
+        val exceptionHandler =
+            CoroutineExceptionHandler { context, throwable ->
+                logger.info("CoroutineExceptionHandler: {}, {}", context, throwable.message)
+            }
         val scope = CoroutineScope(SupervisorJob() + exceptionHandler)
         launchChild(scope)
         Thread.sleep(2000)
@@ -33,9 +33,10 @@ class SupervisorScopeTests {
     }
 
     private fun launchChild(scope: CoroutineScope) {
-        val child = scope.launch {
-            failAfterDelay()
-        }
+        val child =
+            scope.launch {
+                failAfterDelay()
+            }
         child.invokeOnCompletion {
             if (it != null && it !is CancellationException) {
                 logger.info("Child coroutine ended with {}, restarting it", it.message)

@@ -1,48 +1,50 @@
 package org.pedrofelix.course.coroutines
 
-import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertNotEquals
-import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 private val log = LoggerFactory.getLogger(IntroTests::class.java)
 
 class IntroTests {
-
     @Test
-    fun `coroutines are suspendable sequential computations`() = runBlocking {
-        val startTime = System.currentTimeMillis()
-        // launch (create and start) a coroutine
-        val coroutine0 = launch {
-            repeat(5) {
-                log.trace("on repetition {} of first coroutine", it)
-                delay(200)
-            }
-        }
+    fun `coroutines are suspendable sequential computations`() =
+        runBlocking {
+            val startTime = System.currentTimeMillis()
+            // launch (create and start) a coroutine
+            val coroutine0 =
+                launch {
+                    repeat(5) {
+                        log.trace("on repetition {} of first coroutine", it)
+                        delay(200)
+                    }
+                }
 
-        // launch (create and start) another coroutine
-        val coroutine1 = launch {
-            repeat(5) {
-                log.trace("on repetition {} of second coroutine", it)
-                delay(200)
-            }
-        }
+            // launch (create and start) another coroutine
+            val coroutine1 =
+                launch {
+                    repeat(5) {
+                        log.trace("on repetition {} of second coroutine", it)
+                        delay(200)
+                    }
+                }
 
-        coroutine0.join()
-        coroutine1.join()
-        val endTime = System.currentTimeMillis()
-        assertTrue(
-            "The total time to run is less than the sum of the time for each coroutine",
-            endTime - startTime < 2 * 5 * 200,
-        )
-    }
+            coroutine0.join()
+            coroutine1.join()
+            val endTime = System.currentTimeMillis()
+            assertTrue(
+                endTime - startTime < 2 * 5 * 200,
+                "The total time to run is less than the sum of the time for each coroutine",
+            )
+        }
     /*  Takeaways
         - The trace messages show that the two coroutines run concurrently.
           - I.e. the second starts before the first ends.
@@ -55,35 +57,43 @@ class IntroTests {
      */
 
     @Test
-    fun `multiple coroutines can run in the same thread`() = runBlocking {
-        val mainThread = Thread.currentThread()
+    fun `multiple coroutines can run in the same thread`() =
+        runBlocking {
+            val mainThread = Thread.currentThread()
 
-        val coroutine0 = launch {
-            repeat(5) {
-                log.trace("on repetition {} of first coroutine", it)
-                assertEquals("The coroutine runs in the main thread", mainThread, Thread.currentThread())
-                delay(200)
-            }
+            val coroutine0 =
+                launch {
+                    repeat(5) {
+                        log.trace("on repetition {} of first coroutine", it)
+                        assertEquals(
+                            mainThread,
+                            Thread.currentThread(),
+                            "The coroutine runs in the main thread",
+                        )
+                        delay(200)
+                    }
+                }
+
+            val coroutine1 =
+                launch {
+                    repeat(5) {
+                        log.trace("on repetition {} of second coroutine", it)
+                        assertEquals(
+                            mainThread,
+                            Thread.currentThread(),
+                            "The coroutine runs in the main thread",
+                        )
+                        delay(200)
+                    }
+                }
+
+            coroutine0.join()
+            coroutine1.join()
         }
-
-        val coroutine1 = launch {
-            repeat(5) {
-                log.trace("on repetition {} of second coroutine", it)
-                assertEquals("The coroutine runs in the main thread", mainThread, Thread.currentThread())
-                delay(200)
-            }
-        }
-
-        coroutine0.join()
-        coroutine1.join()
-    }
     /*  Takeaways
         - Multiple coroutines can run in the same thread.
         - I.e. Creating a new coroutine doesn't create a new thread (JVM thread or OS thread).
           - As a consequence, coroutines have a lower resource cost (e.g. memory).
-     */
-
-    /*
         - JVM threads map one-to-one to OS threads.
         - The OS schedules the execution of N threads on M CPUs, where N can be much greater that M.
             - This is possible because threads are time multiplexed on CPUs
@@ -118,58 +128,63 @@ class IntroTests {
         val startTime = System.currentTimeMillis()
 
         // submit a task to the executor
-        val task0 = executor.submit {
-            repeat(5) {
-                log.trace("on repetition {} of first coroutine", it)
-                Thread.sleep(200)
+        val task0 =
+            executor.submit {
+                repeat(5) {
+                    log.trace("on repetition {} of first coroutine", it)
+                    Thread.sleep(200)
+                }
             }
-        }
 
         // launch (create and start) another coroutine
-        val task1 = executor.submit {
-            repeat(5) {
-                log.trace("on repetition {} of second coroutine", it)
-                Thread.sleep(200)
+        val task1 =
+            executor.submit {
+                repeat(5) {
+                    log.trace("on repetition {} of second coroutine", it)
+                    Thread.sleep(200)
+                }
             }
-        }
 
         task0.get()
         task1.get()
         val endTime = System.currentTimeMillis()
         assertTrue(
-            "The total time to run is more than the sum of the time for each coroutine",
             endTime - startTime > 2 * 5 * 200,
+            "The total time to run is more than the sum of the time for each coroutine",
         )
     }
 
     @Test
-    fun `what happens if the coroutine blocks the thread where it is running`() = runBlocking {
-        val mainThread = Thread.currentThread()
-        val startTime = System.currentTimeMillis()
-        val coroutine0 = launch {
-            repeat(5) {
-                log.trace("on repetition {} of first coroutine", it)
-                assertEquals("The coroutine runs in the main thread", mainThread, Thread.currentThread())
-                Thread.sleep(200)
-            }
-        }
+    fun `what happens if the coroutine blocks the thread where it is running`() =
+        runBlocking {
+            val mainThread = Thread.currentThread()
+            val startTime = System.currentTimeMillis()
+            val coroutine0 =
+                launch {
+                    repeat(5) {
+                        log.trace("on repetition {} of first coroutine", it)
+                        assertEquals(mainThread, Thread.currentThread(), "The coroutine runs in the main thread")
+                        Thread.sleep(200)
+                    }
+                }
 
-        val coroutine1 = launch {
-            repeat(5) {
-                log.trace("on repetition {} of second coroutine", it)
-                assertEquals("The coroutine runs in the main thread", mainThread, Thread.currentThread())
-                Thread.sleep(200)
-            }
-        }
-        coroutine0.join()
-        coroutine1.join()
+            val coroutine1 =
+                launch {
+                    repeat(5) {
+                        log.trace("on repetition {} of second coroutine", it)
+                        assertEquals(mainThread, Thread.currentThread(), "The coroutine runs in the main thread")
+                        Thread.sleep(200)
+                    }
+                }
+            coroutine0.join()
+            coroutine1.join()
 
-        val endTime = System.currentTimeMillis()
-        assertTrue(
-            "The total time to run is now greater or equal than the sum of the time for each coroutine",
-            endTime - startTime > 2 * 5 * 200,
-        )
-    }
+            val endTime = System.currentTimeMillis()
+            assertTrue(
+                endTime - startTime > 2 * 5 * 200,
+                "The total time to run is now greater or equal than the sum of the time for each coroutine",
+            )
+        }
     /*  Takeaways
 
         - In this case, we are using a non-suspend `Thread.sleep` function, which blocks the hosting thread instead
@@ -180,33 +195,44 @@ class IntroTests {
      */
 
     @Test
-    fun `It is possible to have more than one thread being used to schedule coroutines`() = runBlocking {
-        val mainThread = Thread.currentThread()
-        val startTime = System.currentTimeMillis()
-        val coroutine0 = launch(Dispatchers.Default) {
-            repeat(5) {
-                log.trace("on repetition {} of first coroutine", it)
-                assertNotEquals("The coroutine does NOT run in the main thread", mainThread, Thread.currentThread())
-                Thread.sleep(200)
-            }
-        }
+    fun `It is possible to have more than one thread being used to schedule coroutines`() =
+        runBlocking {
+            val mainThread = Thread.currentThread()
+            val startTime = System.currentTimeMillis()
+            val coroutine0 =
+                launch(Dispatchers.Default) {
+                    repeat(5) {
+                        log.trace("on repetition {} of first coroutine", it)
+                        assertNotEquals(
+                            mainThread,
+                            Thread.currentThread(),
+                            "The coroutine does NOT run in the main thread",
+                        )
+                        Thread.sleep(200)
+                    }
+                }
 
-        val coroutine1 = launch(Dispatchers.Default) {
-            repeat(5) {
-                log.trace("on repetition {} of second coroutine", it)
-                assertNotEquals("The coroutine runs in the main thread", mainThread, Thread.currentThread())
-                Thread.sleep(200)
-            }
-        }
-        coroutine0.join()
-        coroutine1.join()
+            val coroutine1 =
+                launch(Dispatchers.Default) {
+                    repeat(5) {
+                        log.trace("on repetition {} of second coroutine", it)
+                        assertNotEquals(
+                            mainThread,
+                            Thread.currentThread(),
+                            "The coroutine runs in the main thread",
+                        )
+                        Thread.sleep(200)
+                    }
+                }
+            coroutine0.join()
+            coroutine1.join()
 
-        val endTime = System.currentTimeMillis()
-        assertTrue(
-            "The total time to run is now again smalller than the sum of the time for each coroutine",
-            endTime - startTime < 2 * 5 * 200,
-        )
-    }
+            val endTime = System.currentTimeMillis()
+            assertTrue(
+                endTime - startTime < 2 * 5 * 200,
+                "The total time to run is now again smalller than the sum of the time for each coroutine",
+            )
+        }
     /*  Takeaways
 
         - This example uses the `Dispatchers.Default` coroutine dispatcher to run the two launched coroutines.
@@ -217,21 +243,26 @@ class IntroTests {
      */
 
     @Test
-    fun `since coroutines are more lightweight than threads, can we have lots of them`() = runBlocking {
-        val nOfCoroutines = 100_000
-        val mainThread = Thread.currentThread()
+    fun `since coroutines are more lightweight than threads, can we have lots of them`() =
+        runBlocking {
+            val nOfCoroutines = 100_000
+            val mainThread = Thread.currentThread()
 
-        val counter = AtomicInteger(0)
-        val coroutines = (0 until nOfCoroutines).map {
-            launch {
-                assertTrue("Coroutine running on the main thread", mainThread == Thread.currentThread())
-                delay(100)
-                counter.incrementAndGet()
-            }
-        }.toList()
+            val counter = AtomicInteger(0)
+            val coroutines =
+                (0 until nOfCoroutines).map {
+                    launch {
+                        assertTrue(
+                            mainThread == Thread.currentThread(),
+                            "Coroutine running on the main thread",
+                        )
+                        delay(100)
+                        counter.incrementAndGet()
+                    }
+                }.toList()
 
-        coroutines.forEach { coroutine -> coroutine.join() }
-        assertEquals(nOfCoroutines, counter.get())
-        log.trace("yes, we can")
-    }
+            coroutines.forEach { coroutine -> coroutine.join() }
+            assertEquals(nOfCoroutines, counter.get())
+            log.trace("yes, we can")
+        }
 }

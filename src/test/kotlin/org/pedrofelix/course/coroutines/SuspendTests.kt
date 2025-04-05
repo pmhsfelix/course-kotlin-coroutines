@@ -1,16 +1,15 @@
 package org.pedrofelix.course.coroutines
 
-import org.junit.Test
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
+import kotlin.test.Test
 
 private val logger = LoggerFactory.getLogger(SuspendTests::class.java)
 
 class SuspendTests {
-
     @Test
     fun `understanding suspend functions`() {
         var currentContinuation: Continuation<Unit>? = null
@@ -61,13 +60,15 @@ class SuspendTests {
 
         // This is the continuation we are going to pass to the suspend function and that will be called by it
         // when it completes
-        val continuation = object : Continuation<Int> {
-            override val context = EmptyCoroutineContext
-            override fun resumeWith(result: Result<Int>) {
-                logger.trace("Terminal continuation called with result={}", result)
-                done = true
+        val continuation =
+            object : Continuation<Int> {
+                override val context = EmptyCoroutineContext
+
+                override fun resumeWith(result: Result<Int>) {
+                    logger.trace("Terminal continuation called with result={}", result)
+                    done = true
+                }
             }
-        }
 
         // Let's start by calling the suspend function
         nonSuspendFunctionReference.invoke("start", continuation)

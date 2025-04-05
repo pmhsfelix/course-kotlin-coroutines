@@ -5,12 +5,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
 import kotlin.test.Test
 
 class ContextTests {
-
     /**
      *  An example [CoroutineContext.Element] using a companion object as its key.
      */
@@ -26,25 +26,29 @@ class ContextTests {
     }
 
     @Test
-    fun `setting and accessing coroutine context`() = runBlocking<Unit> {
-        // defining the context of a new coroutine by adding two context elements
-        launch(
-            SomeContextElement("hello") +
-                AnotherContextElement("world") +
-                Dispatchers.Default,
-        ) {
-            someSuspendFunction()
+    fun `setting and accessing coroutine context`() =
+        runBlocking<Unit> {
+            // defining the context of a new coroutine by adding two context elements
+            launch(
+                SomeContextElement("hello") +
+                    AnotherContextElement("world") +
+                    Dispatchers.Default,
+            ) {
+                someSuspendFunction()
+            }
         }
-    }
 
     private suspend fun someSuspendFunction() {
         // The context and its elements are available everywhere
-        val someContext = coroutineContext[SomeContextElement]
-            ?: throw IllegalStateException("missing required context")
-        val anotherContext = coroutineContext[AnotherContextElement]
-            ?: throw IllegalStateException("missing required context")
+        val someContext =
+            coroutineContext[SomeContextElement]
+                ?: throw IllegalStateException("missing required context")
+        val anotherContext =
+            coroutineContext[AnotherContextElement]
+                ?: throw IllegalStateException("missing required context")
         logger.info("someContext: {}", someContext.value)
         logger.info("anotherContext: {}", anotherContext.value)
+        logger.info("dispatcher: {}", coroutineContext[ContinuationInterceptor])
     }
 
     companion object {

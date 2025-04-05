@@ -13,24 +13,23 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.supervisorScope
-import org.junit.Assert
-import org.junit.Assert.assertEquals
-import org.junit.Test
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.CoroutineContext
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 private val logger = LoggerFactory.getLogger(CancellationTests::class.java)
 
 class CancellationTests {
-
     @Test
     fun `cancelling coroutines`() {
         try {
             runBlocking(Dispatchers.IO) {
-                val deferred: Deferred<Int> = async {
-                    Thread.sleep(1000)
-                    42
-                }
+                val deferred: Deferred<Int> =
+                    async {
+                        Thread.sleep(1000)
+                        42
+                    }
                 cancel()
                 try {
                     logger.trace("Calling await")
@@ -54,35 +53,38 @@ class CancellationTests {
      */
 
     @Test
-    fun `cancelling coroutines with blocking operations on it`() = runBlocking(Dispatchers.IO) {
-        try {
-            coroutineScope {
-                val c1 = launch {
-                    logger.trace("Before sleep of first coroutine")
-                    Thread.sleep(1000)
-                    logger.trace("After sleep of first coroutine")
+    fun `cancelling coroutines with blocking operations on it`() =
+        runBlocking(Dispatchers.IO) {
+            try {
+                coroutineScope {
+                    val c1 =
+                        launch {
+                            logger.trace("Before sleep of first coroutine")
+                            Thread.sleep(1000)
+                            logger.trace("After sleep of first coroutine")
+                        }
+                    val c2 =
+                        launch {
+                            logger.trace("Before sleep of second coroutine")
+                            Thread.sleep(2000)
+                            logger.trace("After sleep of second coroutine")
+                        }
+                    delay(1500)
+                    logger.trace("cancelling scope")
+                    cancel()
+                    logger.trace(
+                        "c1.isCancelled={}, c1.isCompleted={}, c2.isCancelled={}, c2.isCompleted={}",
+                        c1.isCancelled,
+                        c1.isCompleted,
+                        c2.isCancelled,
+                        c2.isCompleted,
+                    )
                 }
-                val c2 = launch {
-                    logger.trace("Before sleep of second coroutine")
-                    Thread.sleep(2000)
-                    logger.trace("After sleep of second coroutine")
-                }
-                delay(1500)
-                logger.trace("cancelling scope")
-                cancel()
-                logger.trace(
-                    "c1.isCancelled={}, c1.isCompleted={}, c2.isCancelled={}, c2.isCompleted={}",
-                    c1.isCancelled,
-                    c1.isCompleted,
-                    c2.isCancelled,
-                    c2.isCompleted,
-                )
+            } catch (e: CancellationException) {
+                logger.trace("Handling cancellation exception")
             }
-        } catch (e: CancellationException) {
-            logger.trace("Handling cancellation exception")
+            logger.trace("After coroutineScope")
         }
-        logger.trace("After coroutineScope")
-    }
     /*
      * Takeaways:
      * - Cancellation of a coroutine doesn't automatically cancel a blocking operation
@@ -97,37 +99,40 @@ class CancellationTests {
 
     // Adds runInterruptible
     @Test
-    fun `cancelling coroutines using runInterruptible`() = runBlocking(Dispatchers.IO) {
-        try {
-            coroutineScope {
-                val c1 = launch {
-                    logger.trace("Before sleep of first coroutine")
-                    Thread.sleep(1000)
-                    logger.trace("After sleep of first coroutine")
+    fun `cancelling coroutines using runInterruptible`() =
+        runBlocking(Dispatchers.IO) {
+            try {
+                coroutineScope {
+                    val c1 =
+                        launch {
+                            logger.trace("Before sleep of first coroutine")
+                            Thread.sleep(1000)
+                            logger.trace("After sleep of first coroutine")
+                        }
+                    val c2 =
+                        launch {
+                            runInterruptible {
+                                logger.trace("Before sleep of second coroutine")
+                                Thread.sleep(2000)
+                                logger.trace("After sleep of second coroutine")
+                            }
+                        }
+                    delay(1500)
+                    logger.trace("cancelling scope")
+                    cancel()
+                    logger.trace(
+                        "c1.isCancelled={}, c1.isCompleted={}, c2.isCancelled={}, c2.isCompleted={}",
+                        c1.isCancelled,
+                        c1.isCompleted,
+                        c2.isCancelled,
+                        c2.isCompleted,
+                    )
                 }
-                val c2 = launch {
-                    runInterruptible {
-                        logger.trace("Before sleep of second coroutine")
-                        Thread.sleep(2000)
-                        logger.trace("After sleep of second coroutine")
-                    }
-                }
-                delay(1500)
-                logger.trace("cancelling scope")
-                cancel()
-                logger.trace(
-                    "c1.isCancelled={}, c1.isCompleted={}, c2.isCancelled={}, c2.isCompleted={}",
-                    c1.isCancelled,
-                    c1.isCompleted,
-                    c2.isCancelled,
-                    c2.isCompleted,
-                )
+            } catch (e: CancellationException) {
+                logger.trace("Handling cancellation exception")
             }
-        } catch (e: CancellationException) {
-            logger.trace("Handling cancellation exception")
+            logger.trace("After coroutineScope")
         }
-        logger.trace("After coroutineScope")
-    }
     /*
      * Takeaways:
      * - Now the test does take ~1500 ms because the `Thread.sleep` is interrupted when
@@ -136,28 +141,32 @@ class CancellationTests {
      */
 
     @Test
-    fun `child cancellation - a child throws Exception`() = runBlocking(CoroutineExceptionHandler(::exceptionHandler)) {
-        var job0: Job? = null
-        var job1: Job? = null
-        var job2: Job? = null
+    fun `child cancellation - a child throws Exception`() =
+        runBlocking(CoroutineExceptionHandler(::exceptionHandler)) {
+            var job0: Job? = null
+            var job1: Job? = null
+            var job2: Job? = null
 
-        supervisorScope {
-            job0 = launch {
-                job1 = launch {
-                    delay(10)
-                    throw Exception("Bum!!")
-                }
+            supervisorScope {
+                job0 =
+                    launch {
+                        job1 =
+                            launch {
+                                delay(10)
+                                throw Exception("Bum!!")
+                            }
 
-                job2 = launch {
-                    delay(20)
-                }
+                        job2 =
+                            launch {
+                                delay(20)
+                            }
+                    }
             }
-        }
 
-        assertEquals(JobState.CANCELLED, job0?.getState())
-        assertEquals(JobState.CANCELLED, job1?.getState())
-        assertEquals(JobState.CANCELLED, job2?.getState())
-    }
+            assertEquals(JobState.CANCELLED, job0?.getState())
+            assertEquals(JobState.CANCELLED, job1?.getState())
+            assertEquals(JobState.CANCELLED, job2?.getState())
+        }
     /*
      * Takeaways:
      * - an exception (different from CancellationException) on child1 cancel both the parent and the sibling
@@ -171,16 +180,19 @@ class CancellationTests {
             var job2: Job? = null
 
             supervisorScope {
-                job0 = launch {
-                    job1 = launch {
-                        delay(10)
-                        throw CancellationException("Giving up")
-                    }
+                job0 =
+                    launch {
+                        job1 =
+                            launch {
+                                delay(10)
+                                throw CancellationException("Giving up")
+                            }
 
-                    job2 = launch {
-                        delay(20)
+                        job2 =
+                            launch {
+                                delay(20)
+                            }
                     }
-                }
             }
 
             assertEquals(JobState.COMPLETED, job0?.getState())
@@ -200,17 +212,20 @@ class CancellationTests {
             var job2: Deferred<Int>? = null
 
             supervisorScope {
-                job0 = launch {
-                    job1 = async {
-                        delay(10)
-                        throw CancellationException("Giving up")
-                    }
+                job0 =
+                    launch {
+                        job1 =
+                            async {
+                                delay(10)
+                                throw CancellationException("Giving up")
+                            }
 
-                    job2 = async {
-                        delay(20)
-                        42
+                        job2 =
+                            async {
+                                delay(20)
+                                42
+                            }
                     }
-                }
             }
 
             assertEquals(JobState.COMPLETED, job0?.getState())
@@ -225,30 +240,35 @@ class CancellationTests {
      */
 
     @Test
-    fun `using supervisorScope`() = runBlocking {
-        val job0 = launch(CoroutineExceptionHandler(::exceptionHandler)) {
-            supervisorScope {
-                launch {
-                    delay(10)
-                    throw Exception("Bum!!")
+    fun `using supervisorScope`(): Unit =
+        runBlocking {
+            val job0 =
+                launch(CoroutineExceptionHandler(::exceptionHandler)) {
+                    supervisorScope {
+                        launch {
+                            delay(10)
+                            throw Exception("Bum!!")
+                        }
+
+                        launch {
+                            delay(20)
+                            logger.info("Child 2 completed normally")
+                        }
+                    }
                 }
 
-                launch {
-                    delay(20)
-                    logger.info("Child 2 completed normally")
-                }
-            }
+            job0.join()
+            assertEquals(JobState.COMPLETED, job0.getState())
         }
-
-        job0.join()
-        Assert.assertEquals(JobState.COMPLETED, job0.getState())
-    }
     /*
      * Takeaways:
      * - Using supervisorScope prevents the parent from being cancelled even if one of the childs is cancelled
      */
 
-    private fun exceptionHandler(context: CoroutineContext, ex: Throwable) {
+    private fun exceptionHandler(
+        context: CoroutineContext,
+        ex: Throwable,
+    ) {
         logger.info("Exception handler: Exception '{}' on '{}'", ex, context)
     }
 }

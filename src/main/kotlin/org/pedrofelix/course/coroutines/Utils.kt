@@ -15,6 +15,7 @@ suspend fun join(vararg jobs: Job) {
     }
 }
 
-fun joinBlocking(vararg jobs: Job) = runBlocking {
-    join(*jobs)
-}
+fun joinBlocking(vararg jobs: Job) =
+    runBlocking {
+        join(*jobs)
+    }

@@ -1,42 +1,43 @@
 package org.pedrofelix.course.coroutines
 
-import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
-import org.junit.Test
 import org.slf4j.LoggerFactory
+import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 private val logger = LoggerFactory.getLogger(FlowIntroTests::class.java)
 
 class FlowIntroTests {
-
     @Test
     fun begin() {
         // represents a computation that can be called, may suspend during execution and returns an Int
-        val aSuspendFunctionReturningAnInt: suspend () -> Int = suspend {
-            delay(100)
-            42
-        }
+        val aSuspendFunctionReturningAnInt: suspend () -> Int =
+            suspend {
+                delay(100)
+                42
+            }
 
         // represents a computation that can be called, may suspend during execution and returns a List of Int
-        val aSuspendFunctionReturningAListOfInts: suspend () -> List<Int> = suspend {
-            delay(100)
-            listOf(1, 2)
-        }
+        val aSuspendFunctionReturningAListOfInts: suspend () -> List<Int> =
+            suspend {
+                delay(100)
+                listOf(1, 2)
+            }
 
         // represents a computation that can be called and that will emit Ints during its execution.
-        val aFlowProducingInts: Flow<Int> = flow {
-            for (i in 1..2) {
-                delay(100)
-                emit(i)
+        val aFlowProducingInts: Flow<Int> =
+            flow {
+                for (i in 1..2) {
+                    delay(100)
+                    emit(i)
+                }
             }
-        }
 
         runBlocking {
             // invoke will return an Int, eventually after some suspensions
@@ -59,13 +60,14 @@ class FlowIntroTests {
         // A flow, defined outside of any coroutine
         // The flow defines a suspendable computation that produces/emits multiples values
         // Notice how the suspensions may occur between the production of each value
-        val theFlow = flow {
-            for (i in 0..7) {
-                delay(100)
-                logger.trace("Flow emitting {}", i)
-                emit(i)
+        val theFlow =
+            flow {
+                for (i in 0..7) {
+                    delay(100)
+                    logger.trace("Flow emitting {}", i)
+                    emit(i)
+                }
             }
-        }
 
         // A suspendable function that uses the flow
         suspend fun sum(flow: Flow<Int>): Int {
@@ -92,17 +94,18 @@ class FlowIntroTests {
 
     @Test
     fun `partial collect - collecting only the first element`() {
-        val theFlow = flow {
-            try {
-                for (i in 0..7) {
-                    delay(100)
-                    logger.trace("Flow emitting {}", i)
-                    emit(i)
+        val theFlow =
+            flow {
+                try {
+                    for (i in 0..7) {
+                        delay(100)
+                        logger.trace("Flow emitting {}", i)
+                        emit(i)
+                    }
+                } catch (e: CancellationException) {
+                    logger.trace("flow aborted")
                 }
-            } catch (e: CancellationException) {
-                logger.trace("flow aborted")
             }
-        }
 
         runBlocking {
             // println(sum(theFlow))

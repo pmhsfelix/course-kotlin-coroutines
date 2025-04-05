@@ -5,23 +5,21 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
+import kotlin.test.Test
 
 private val logger = LoggerFactory.getLogger(ScopeAndContextTests::class.java)
 
 class ScopeAndContextTests {
-
     @Test
     fun first() {
         logger.trace("Starting the test")
@@ -133,13 +131,14 @@ class ScopeAndContextTests {
      */
 
     @Test
-    fun `changing the dispatcher on a coroutine`() = runBlocking {
-        logger.trace("Inside the coroutine, before the withContext")
-        withContext(Dispatchers.IO) {
-            logger.trace("Inside the withContext")
+    fun `changing the dispatcher on a coroutine`() =
+        runBlocking {
+            logger.trace("Inside the coroutine, before the withContext")
+            withContext(Dispatchers.IO) {
+                logger.trace("Inside the withContext")
+            }
+            logger.trace("Inside the coroutine, after the withContext")
         }
-        logger.trace("Inside the coroutine, after the withContext")
-    }
 
     @Test
     fun `using a explicit scope`() {
@@ -166,16 +165,18 @@ class ScopeAndContextTests {
     @Test
     fun `using a explicit scope with a spin-wait`() {
         val scope = CoroutineScope(Dispatchers.Unconfined)
-        val c1 = scope.launch {
-            logger.trace("Inside first nested coroutine, before delay")
-            delay(1000)
-            logger.trace("Inside first nested coroutine, after delay")
-        }
-        val c2 = scope.launch {
-            logger.trace("Inside second nested coroutine, before delay")
-            delay(1000)
-            logger.trace("Inside second nested coroutine, after delay")
-        }
+        val c1 =
+            scope.launch {
+                logger.trace("Inside first nested coroutine, before delay")
+                delay(1000)
+                logger.trace("Inside first nested coroutine, after delay")
+            }
+        val c2 =
+            scope.launch {
+                logger.trace("Inside second nested coroutine, before delay")
+                delay(1000)
+                logger.trace("Inside second nested coroutine, after delay")
+            }
 
         // Wait until the coroutines are completed
         // spin-wait only for demo purposes, do not use this in production
@@ -195,16 +196,18 @@ class ScopeAndContextTests {
     @Test
     fun `using a explicit scope with a spin-wait and Dispatchers Default`() {
         val scope = CoroutineScope(Dispatchers.Default)
-        val c1 = scope.launch {
-            logger.trace("Inside first nested coroutine, before delay")
-            delay(1000)
-            logger.trace("Inside first nested coroutine, after delay")
-        }
-        val c2 = scope.launch {
-            logger.trace("Inside second nested coroutine, before delay")
-            delay(1000)
-            logger.trace("Inside second nested coroutine, after delay")
-        }
+        val c1 =
+            scope.launch {
+                logger.trace("Inside first nested coroutine, before delay")
+                delay(1000)
+                logger.trace("Inside first nested coroutine, after delay")
+            }
+        val c2 =
+            scope.launch {
+                logger.trace("Inside second nested coroutine, before delay")
+                delay(1000)
+                logger.trace("Inside second nested coroutine, after delay")
+            }
         while (!c1.isCompleted || !c2.isCompleted) {
             Thread.yield()
         }
@@ -249,7 +252,6 @@ class ScopeAndContextTests {
     // Let's do a custom dispatcher that uses the current thread to dispatch,
     // based on a loop.
     class InPlaceDispatcher : CoroutineDispatcher() {
-
         // a marker that we put in the queue to signal that no more work item will be added
         companion object {
             private val POISON_PILL = Runnable { }
@@ -258,7 +260,10 @@ class ScopeAndContextTests {
         // the queue with the work items to execute.
         private val queue = LinkedBlockingQueue<Runnable>()
 
-        override fun dispatch(context: CoroutineContext, block: Runnable) {
+        override fun dispatch(
+            context: CoroutineContext,
+            block: Runnable,
+        ) {
             // TODO not protected against a dispatch after a shutdown
             queue.offer(block)
         }
@@ -312,4 +317,28 @@ class ScopeAndContextTests {
      * Takeaways:
      * - Creating a custom dispatcher that uses the current thread to execute the work items.
      */
+
+    @Test
+    fun `using a CoroutineScope without waiting`() {
+        logger.info("Test starting")
+        val job = Job()
+        val scope = CoroutineScope(job)
+        scope.launch {
+            logger.info("Coroutine starting")
+            launch {
+                logger.info("Nested coroutine starting")
+                delay(2000)
+                logger.info("Nested coroutine ending")
+            }
+            delay(1000)
+            logger.info("Coroutine ending")
+        }
+        job.complete()
+        val countDownLatch = CountDownLatch(1)
+        scope.coroutineContext[Job]?.invokeOnCompletion {
+            countDownLatch.countDown()
+        }
+        countDownLatch.await()
+        logger.info("Test ending")
+    }
 }

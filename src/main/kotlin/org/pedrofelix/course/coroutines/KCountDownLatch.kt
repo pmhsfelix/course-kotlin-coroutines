@@ -7,7 +7,6 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 class KCountDownLatch(initialCounter: Int) {
-
     private var counter = initialCounter
     private val lock = Mutex()
     private val waiters = mutableListOf<Continuation<Unit>>()

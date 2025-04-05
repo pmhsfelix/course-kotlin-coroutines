@@ -26,7 +26,6 @@ import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 class ServerUsingThreads {
-
     fun run() {
         val serverSocket = ServerSocket()
         serverSocket.bind(InetSocketAddress("0.0.0.0", 8080))
@@ -40,7 +39,10 @@ class ServerUsingThreads {
         }
     }
 
-    private fun runClient(socket: Socket, clientId: Int) {
+    private fun runClient(
+        socket: Socket,
+        clientId: Int,
+    ) {
         try {
             logger.info("{}: Starting client", clientId)
             val inputStream = socket.getInputStream()
@@ -71,7 +73,6 @@ class ServerUsingThreads {
 val dispatcher = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
 
 class ServerUsingCoroutines {
-
     suspend fun run() {
         val serverSocket = AsynchronousServerSocketChannel.open()
         serverSocket.bind(InetSocketAddress("0.0.0.0", 8080))
@@ -85,9 +86,10 @@ class ServerUsingCoroutines {
                 logger.info("shutdown completed")
             },
         )
-        val handler = CoroutineExceptionHandler { _, ex ->
-            logger.info("Coroutine ended with exception: {}", ex.javaClass.simpleName)
-        }
+        val handler =
+            CoroutineExceptionHandler { _, ex ->
+                logger.info("Coroutine ended with exception: {}", ex.javaClass.simpleName)
+            }
         try {
             coroutineScope {
                 try {
@@ -110,7 +112,10 @@ class ServerUsingCoroutines {
         logger.info("run ending")
     }
 
-    private suspend fun runClient(channel: AsynchronousSocketChannel, clientId: Int) {
+    private suspend fun runClient(
+        channel: AsynchronousSocketChannel,
+        clientId: Int,
+    ) {
         try {
             logger.info("{}: Starting client", clientId)
             val buffer = ByteBuffer.allocate(2)
@@ -143,10 +148,11 @@ class ServerUsingCoroutines {
     server.run()
 }*/
 
-fun main(): Unit = runBlocking {
-    val server = ServerUsingCoroutines()
-    server.run()
-}
+fun main(): Unit =
+    runBlocking {
+        val server = ServerUsingCoroutines()
+        server.run()
+    }
 
 suspend fun AsynchronousServerSocketChannel.acceptAsync() =
     suspendCoroutine<AsynchronousSocketChannel> { continuation ->
@@ -154,11 +160,17 @@ suspend fun AsynchronousServerSocketChannel.acceptAsync() =
         this.accept(
             Unit,
             object : CompletionHandler<AsynchronousSocketChannel, Unit> {
-                override fun completed(channel: AsynchronousSocketChannel, attachment: Unit) {
+                override fun completed(
+                    channel: AsynchronousSocketChannel,
+                    attachment: Unit,
+                ) {
                     continuation.resume(channel)
                 }
 
-                override fun failed(exception: Throwable, attachment: Unit) {
+                override fun failed(
+                    exception: Throwable,
+                    attachment: Unit,
+                ) {
                     continuation.resumeWithException(exception)
                 }
             },
@@ -178,11 +190,17 @@ suspend fun AsynchronousByteChannel.readAsync(buffer: ByteBuffer) =
             buffer,
             Unit,
             object : CompletionHandler<Int, Unit> {
-                override fun completed(result: Int, attachment: Unit) {
+                override fun completed(
+                    result: Int,
+                    attachment: Unit,
+                ) {
                     continuation.resume(result)
                 }
 
-                override fun failed(exc: Throwable, attachment: Unit) {
+                override fun failed(
+                    exc: Throwable,
+                    attachment: Unit,
+                ) {
                     continuation.resumeWithException(exc)
                 }
             },
@@ -201,12 +219,17 @@ suspend fun AsynchronousByteChannel.writeAsync(buffer: ByteBuffer) =
             buffer,
             Unit,
             object : CompletionHandler<Int, Unit> {
-
-                override fun completed(result: Int, attachment: Unit) {
+                override fun completed(
+                    result: Int,
+                    attachment: Unit,
+                ) {
                     continuation.resume(result)
                 }
 
-                override fun failed(exc: Throwable, attachment: Unit) {
+                override fun failed(
+                    exc: Throwable,
+                    attachment: Unit,
+                ) {
                     continuation.resumeWithException(exc)
                 }
             },
