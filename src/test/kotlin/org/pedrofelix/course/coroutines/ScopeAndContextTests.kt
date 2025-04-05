@@ -1,10 +1,20 @@
 package org.pedrofelix.course.coroutines
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.Runnable
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.junit.Test
 import org.slf4j.LoggerFactory
-import java.util.concurrent.*
-import java.util.concurrent.CancellationException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.CoroutineContext
 
@@ -126,6 +136,7 @@ class ScopeAndContextTests {
         logger.trace("Inside the coroutine, before the withContext")
         withContext(Dispatchers.IO) {
             logger.trace("Inside the withContext")
+            delay(1000)
         }
         logger.trace("Inside the coroutine, after the withContext")
     }
@@ -195,7 +206,7 @@ class ScopeAndContextTests {
             logger.trace("Inside second nested coroutine, after delay")
         }
         while (!c1.isCompleted || !c2.isCompleted) {
-            Thread.yield();
+            Thread.yield()
         }
 
         logger.trace("Ending test")

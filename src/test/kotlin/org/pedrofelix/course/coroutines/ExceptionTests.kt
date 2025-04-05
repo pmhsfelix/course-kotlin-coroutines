@@ -24,7 +24,7 @@ class ExceptionTests {
             job.join()
         } catch (e: Exception) {
             logger.info("Exception caught on launch: {}", e.message)
-            fail("join on a coroutine that was created via join doesn't rethrow the exception")
+            fail("join on a coroutine that was created via launch doesn't rethrow the exception")
         }
         // Takeaway: the exception is NOT observed by the join
 
@@ -114,7 +114,7 @@ class ExceptionTests {
         job.join()
         // Takeaways:
         // - The exception is NOT observed by the join and therefore the exception handler IS called.
-        // - Howevet, the exception handler is only called at the top level.
+        // - However, the exception handler is only called at the top level.
 
         assertEquals(1, outerCounter.get())
         assertEquals(0, innerCounter.get())

@@ -1,12 +1,12 @@
 package org.pedrofelix.course.coroutines
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Test
 import org.slf4j.LoggerFactory
 
@@ -15,7 +15,7 @@ private val logger = LoggerFactory.getLogger(FlowIntroTests::class.java)
 class FlowIntroTests {
 
     @Test
-    fun begin(): Unit {
+    fun begin() {
 
         // represents a computation that can be called, may suspend during execution and returns an Int
         val aSuspendFunctionReturningAnInt: suspend () -> Int = suspend {
@@ -26,12 +26,12 @@ class FlowIntroTests {
         // represents a computation that can be called, may suspend during execution and returns a List of Int
         val aSuspendFunctionReturningAListOfInts: suspend () -> List<Int> = suspend {
             delay(100)
-            listOf(1,2)
+            listOf(1, 2)
         }
 
         // represents a computation that can be called and that will emit Ints during its execution.
         val aFlowProducingInts: Flow<Int> = flow {
-            for(i in 1..2) {
+            for (i in 1..2) {
                 delay(100)
                 emit(i)
             }
@@ -46,15 +46,14 @@ class FlowIntroTests {
             val theIntList: List<Int> = aSuspendFunctionReturningAListOfInts.invoke()
 
             // collect will call the passed in block for each value produced by the flow
-            aFlowProducingInts.collect { it
-                logger.trace("A Int produced by the flow", {})
+            aFlowProducingInts.collect {
+                logger.trace("A Int produced by the flow: {}", it)
             }
         }
-
     }
 
     @Test
-    fun `defining and consuming a flow`(): Unit {
+    fun `defining and consuming a flow`() {
         // A flow, defined outside of any coroutine
         // The flow defines a suspendable computation that produces/emits multiples values
         // Notice how the suspensions may occur between the production of each value
@@ -82,15 +81,15 @@ class FlowIntroTests {
         }
     }
     /*
-       Takeaways:
-       - A flow can be defined anywhere, namely outside of a coroutine.
-       - No computation is run when the flow is executed. Defining a flow defines the computation but doesn't run it.
-       - Any suspend function can run the computation by "collecting" the items produced by the flow.
-       - The flow computation will run in the coroutine where it was "collected".
+     * Takeaways:
+     * - A flow can be defined anywhere, namely outside of a coroutine.
+     * - No computation is run when the flow is defined. Defining a flow defines the computation but doesn't run it.
+     * - Any suspend function can run the computation by "collecting" the items produced by the flow.
+     * - The flow computation will run in the coroutine where it was "collected".
      */
 
     @Test
-    fun `partial collect - collecting only the first element`(): Unit {
+    fun `partial collect - collecting only the first element`() {
 
         val theFlow = flow {
             try {
@@ -100,7 +99,8 @@ class FlowIntroTests {
                     emit(i)
                 }
             } catch (e: CancellationException) {
-                logger.trace("flow aborted")
+                logger.trace("flow aborted with {}", e.message)
+                throw e
             }
         }
 
@@ -111,11 +111,119 @@ class FlowIntroTests {
         }
     }
     /*
-       Takeaways:
-       - Notice how on the two `theFlow.first()` call, the flow computation always starts at the first value.
-         I.e. the first computation state is not reused on the second call.
-       - Notice how the `for` inside the flow is _broken_ (early end), because the `emit` throws `CancellationException`
-
+     * Takeaways:
+     * - Notice how on the two `theFlow.first()` call, the flow computation always starts at the first value.
+     *   I.e. the first computation state is not reused on the second call.
+     * - Notice how the `for` inside the flow is _broken_ (early end), because the `emit` throws `CancellationException`
+     * - HOWEVER that exception is not thrown outside of the `first` call, i.e, outside the collect.
+     *   This is due to exception transparency.
      */
 
+    @Test
+    fun `transform operator`() = runBlocking {
+
+        val initialFlow = (0..5).asFlow()
+        val transformedFlow = initialFlow.transform {
+            it
+            emit(it)
+            emit(it)
+        }
+
+        var acc = 0
+        transformedFlow.collect {
+            acc += it
+        }
+        assertEquals(30, acc)
+    }
+
+    @Test
+    fun `changing context`() = runBlocking {
+
+        val theFlow = flow {
+            repeat(5) {
+                logger.info("about to sleep")
+                Thread.sleep(500)
+                emit(it)
+            }
+        }.flowOn(Dispatchers.IO)
+
+        logger.info("before collect")
+        theFlow.collect {
+            delay(1000)
+            logger.info("collection '{}'", it)
+        }
+    }
+
+    @Test
+    fun `exception transparency`() = runBlocking {
+        val theFlow = flow {
+            try {
+                repeat(5) {
+                    logger.info("emitting {}", it)
+                    emit(it)
+                    delay(100)
+                }
+            } catch (ex: Exception) {
+                logger.info("caught {}", ex.message)
+                throw ex
+            }
+        }
+
+        logger.info("before collect")
+        try {
+            theFlow.collect {
+                logger.info("collection '{}'", it)
+                throw Exception("For testing purposes")
+            }
+            fail()
+        } catch (ex: Exception) {
+            assertEquals("For testing purposes", ex.message)
+        }
+    }
+
+    @Test
+    fun `changing context and exceptions`() = runBlocking {
+        val theFlow = flow {
+            try {
+                repeat(5) {
+                    logger.info("emitting {}", it)
+                    emit(it)
+                    delay(100)
+                }
+            } catch (ex: Exception) {
+                logger.info("caught {}", ex.message)
+                throw ex
+            }
+        }.flowOn(Dispatchers.IO)
+
+        logger.info("before collect")
+        try {
+            theFlow.collect {
+                logger.info("collection '{}'", it)
+                throw Exception("For testing purposes")
+            }
+            fail()
+        } catch (ex: Exception) {
+            assertEquals("For testing purposes", ex.message)
+        }
+    }
+
+    @Test
+    fun `using delay`() = runBlocking {
+        var attempt = 0
+        val theFlow = flow {
+            logger.info("Flow called")
+            if(attempt == 0) {
+                attempt += 1
+                throw Exception("Exception on emission")
+            }
+            emit(42)
+        }.retry()
+
+        logger.info("Start collecting")
+        theFlow.collect {
+            logger.info("Collecting '{}'", it)
+        }
+
+    }
 }

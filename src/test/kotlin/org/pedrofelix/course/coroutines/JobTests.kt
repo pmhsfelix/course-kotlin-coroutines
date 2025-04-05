@@ -75,7 +75,7 @@ class JobTests {
      * coroutineContext
      * - As new children coroutines are created, their jobs are added as childs of the parent coroutine
      * (i.e. the coroutine providing the context from which the CoroutineScope was created).
-     * - Children coroutines are removed from the parent hen they complete.
+     * - Children coroutines are removed from the parent when they complete.
      */
 
     @Test
